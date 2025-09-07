@@ -1,0 +1,33 @@
+plugins {
+	id "java"
+	id "org.springframework.boot" version "3.3.4"
+	id "io.spring.dependency-management" version "1.1.6"
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation "org.springframework.boot:spring-boot-starter-web"
+	testImplementation "org.springframework.boot:spring-boot-starter-test"
+}
+
+// Copy UI build output into classpath:/static for packaging
+tasks.named("processResources") {
+	dependsOn(":ui:buildUi")
+	from(project(":ui").layout.projectDirectory.dir("dist")) {
+		into "static"
+	}
+}
+
+// Ensure the bootJar includes the copied resources
+tasks.named("bootJar") {
+	dependsOn(tasks.named("processResources"))
+}

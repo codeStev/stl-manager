@@ -1,0 +1,2 @@
+rootProject.name = 'stl-manager'
+include('server', 'ui')

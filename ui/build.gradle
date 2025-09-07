@@ -1,0 +1,47 @@
+plugins {
+    id "com.github.node-gradle.node" version "7.0.2"
+}
+
+def uiDistDir = layout.projectDirectory.dir("dist")
+
+node {
+    download = true
+    version = "23.9.0"
+    npmVersion = "11.4.2"
+    workDir = file("${buildDir}/node")
+    npmWorkDir = file("${buildDir}/npm")
+}
+
+tasks.register("npmCi", com.github.gradle.node.npm.task.NpmTask) {
+    description = "Install UI dependencies with npm ci"
+    args = ["ci"]
+    workingDir = project.projectDir
+    inputs.file("package.json")
+    inputs.file("package-lock.json")
+    outputs.dir(file("node_modules"))
+}
+
+tasks.register("buildUi", com.github.gradle.node.npm.task.NpmTask) {
+    description = "Build UI static assets"
+    dependsOn("npmCi")
+    args = ["run", "build"]
+    workingDir = project.projectDir
+
+    inputs.dir("src")
+    inputs.file("index.html")
+    inputs.file("package.json")
+    inputs.file("package-lock.json")
+    // If you have these, uncomment:
+    // inputs.file("vite.config.ts")
+    // inputs.dir("public")
+
+    outputs.dir(uiDistDir)
+}
+
+// Make conventional lifecycle tasks useful
+tasks.register("cleanDist", Delete) {
+    delete uiDistDir
+}
+tasks.register("assemble") {
+    dependsOn("buildUi")
+}
