@@ -9,6 +9,6 @@ import java.util.Optional;
 public interface StlFileRepository extends JpaRepository<StlFile, Long> {
 
     List<StlFile> findAllByModels_Id(Long modelId);
-    boolean deleteAllByModels_Id(Long modelId);
+    void deleteAllByModels_Id(Long modelId);
     Optional<StlFile> findByModels_IdAndStoragePathIgnoreCase(Long modelId, String storagePath);
 }

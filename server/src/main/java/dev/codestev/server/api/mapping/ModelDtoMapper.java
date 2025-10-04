@@ -7,7 +7,6 @@ import dev.codestev.server.business.mapping.MapstructCentralConfig;
 import dev.codestev.server.business.model.ModelDetailed;
 import dev.codestev.server.business.model.ModelPreview;
 import dev.codestev.server.business.model.StlFileRef;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -27,11 +26,10 @@ import java.util.Set;
 )
 public interface ModelDtoMapper {
 
-    @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "id",        source = "id")
     @Mapping(target = "name",      source = "name")
     @Mapping(target = "library",   source = "library")    // LibraryRef -> LibraryDto
-    @Mapping(target = "artist",    source = "artist")     // ArtistRef -> ArtistSummaryDto
+    @Mapping(target = "artist",    source = "artist")   // ArtistRef -> ArtistSummaryDto
     @Mapping(target = "thumbnail", source = "thumbnail")  // ImageInfo -> ImageInfoDto
     @Mapping(target = "previews",  source = "previews")   // List<ModelPreviewRef> -> List<ModelPreviewDto>
     @Mapping(target = "stlFiles",  source = "stlFiles")   // Set<StlFileRef> -> List<StlFileRefDto> (order as defined by business)

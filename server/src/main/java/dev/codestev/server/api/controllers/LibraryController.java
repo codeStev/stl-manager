@@ -2,8 +2,12 @@ package dev.codestev.server.api.controllers;
 
 import dev.codestev.server.api.dto.CreateLibraryRequest;
 import dev.codestev.server.api.dto.common.LibraryDto;
+import dev.codestev.server.api.dto.model.ModelDetailedDto;
 import dev.codestev.server.api.mapping.LibraryDtoMapper;
+import dev.codestev.server.api.mapping.ModelDtoMapper;
+import dev.codestev.server.business.model.ModelDetailed;
 import dev.codestev.server.business.service.LibraryService;
+import dev.codestev.server.business.service.ModelService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +20,14 @@ public class LibraryController {
 
     private final LibraryService libraryService;
     private final LibraryDtoMapper libraryDtoMapper;
+    private final ModelService modelService;
+    private final ModelDtoMapper modelDtoMapper;
 
-    public LibraryController(LibraryService libraryService, LibraryDtoMapper libraryDtoMapper) {
+    public LibraryController(LibraryService libraryService, LibraryDtoMapper libraryDtoMapper, ModelService modelService, ModelDtoMapper modelDtoMapper) {
         this.libraryService = libraryService;
         this.libraryDtoMapper = libraryDtoMapper;
+        this.modelService = modelService;
+        this.modelDtoMapper = modelDtoMapper;
     }
 
     @PostMapping
@@ -35,8 +43,8 @@ public class LibraryController {
     }
 
     @GetMapping("/{id}/model")
-    public List<LibraryDto> list() {
-        var refs = libraryService.listLibraries();
-        return libraryDtoMapper.toDtoList(refs);
+    public List<ModelDetailedDto> list(@PathVariable long id) {
+        List<ModelDetailed> allModelDetailsByLibraryId = modelService.getAllModelDetailsByLibraryId(id);
+        return allModelDetailsByLibraryId.stream().map(modelDtoMapper::toDetailedDto).toList();
     }
 }

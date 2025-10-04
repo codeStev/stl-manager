@@ -3,13 +3,16 @@ POST http://localhost:8080/api/libraries
 Content-Type: application/json
 
 {
-  "library_name": "stltestlib2",
-  "library_path": "/home/{{user_folder}}/stltestlib"
+  "library_name": "stltestlib",
+  "library_path": "/home/{{user_folder}}/stltestlib2"
 }
 ###
 
 ### GET get all Libraries
 GET http://localhost:8080/api/libraries
+
+### GET get all Models of library
+GET http://localhost:8080/api/libraries/{{library_id}}/model
 
 ### GET get Library by Id
 GET http://localhost:8080/api/libraries/{{library_id}}

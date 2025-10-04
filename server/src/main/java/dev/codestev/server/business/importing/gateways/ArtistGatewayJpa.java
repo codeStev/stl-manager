@@ -33,4 +33,9 @@ public class ArtistGatewayJpa implements ModelImportServiceImpl.ArtistGateway {
             artistRepository.deleteById(artistId);
         }
     }
+
+    @Override
+    public Artist findById(long artistId) {
+        return artistRepository.findById(artistId).orElse(null);
+    }
 }

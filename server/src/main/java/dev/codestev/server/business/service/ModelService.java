@@ -19,11 +19,9 @@ public class ModelService {
         this.modelMapper = modelMapper;
     }
 
-    List<ModelDetailed> getAllModelDetailsByLibraryId(long libraryId){
+    public List<ModelDetailed> getAllModelDetailsByLibraryId(long libraryId){
         List<Model> allModels = modelRepository.findAllByLibrary_Id(libraryId);
-        List<ModelDetailed> modelDetailsBusiness = allModels.stream().map(modelMapper::toBusiness).toList();
-        return modelDetailsBusiness;
-
+        return allModels.stream().map(modelMapper::toBusiness).toList();
     }
 
 

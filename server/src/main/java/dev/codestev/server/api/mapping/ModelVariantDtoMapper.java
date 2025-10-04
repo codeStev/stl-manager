@@ -5,7 +5,6 @@ import dev.codestev.server.api.dto.model.ModelVariantRefDto;
 import dev.codestev.server.api.dto.stl.StlFileRefDto;
 import dev.codestev.server.business.mapping.MapstructCentralConfig;
 import dev.codestev.server.business.model.ModelVariantDetails;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -18,12 +17,10 @@ import java.util.Set;
 )
 public interface ModelVariantDtoMapper {
 
-    @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "id",   source = "id")
     @Mapping(target = "name", source = "name")
     ModelVariantRefDto toRefDto(ModelVariantDetails ref);
 
-    @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "id",             source = "id")
     @Mapping(target = "name",           source = "name")
     @Mapping(target = "inheritBaseFiles", source = "inheritBaseFiles")

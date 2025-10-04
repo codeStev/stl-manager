@@ -1,5 +1,6 @@
 package dev.codestev.server.business.importing;
 
+import dev.codestev.server.persistence.model.Artist;
 import dev.codestev.server.persistence.model.Library;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +88,8 @@ public class ModelImportServiceImpl implements ModelImportService {
                 if (props.isDeleteOrphans()) {
                     Set<String> scannedNames = scanned.keySet();
                     for (var orphan : existing.values()) {
-                        if (!scannedNames.contains(orphan.name())) {
+                        Artist artist = artistGateway.findById(orphan.artistId());
+                        if (!scannedNames.contains(artist != null ? artist.getName() + "/" + orphan.name() : orphan.name())) {
                             deleteModel(orphan);
                         }
                     }
@@ -112,7 +114,7 @@ public class ModelImportServiceImpl implements ModelImportService {
             artistId = artistGateway.getOrCreateArtist(scannedModel.artist());
         }
 
-        long modelId = modelGateway.createModel(scannedModel.name(), library, artistId);
+        long modelId = modelGateway.createModel(scannedModel.model(), library, artistId);
 
         // Prepare variant ids for any named variants
         Map<String, Long> variantIds = new HashMap<>();
@@ -247,6 +249,7 @@ public class ModelImportServiceImpl implements ModelImportService {
     public interface ArtistGateway {
         Long getOrCreateArtist(String name);
         void deleteArtistIfOrphan(long artistId);
+        Artist findById(long artistId);
     }
 
     public interface VariantGateway {
