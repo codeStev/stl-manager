@@ -17,5 +17,5 @@ GET http://localhost:8080/api/libraries/{{library_id}}/model
 ### GET get Library by Id
 GET http://localhost:8080/api/libraries/{{library_id}}
 
-### POST add new Library
-POST http://localhost:8080/api/libraries/
+### GET get File by Id
+GET http://localhost:8080/api/file/315

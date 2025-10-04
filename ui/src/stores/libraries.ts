@@ -1,28 +1,23 @@
-// src/stores/libraries.ts
-import { defineStore } from 'pinia'
-import {computed, ref} from 'vue'
-import type { Library } from '@/types/external/LibraryTypes'
-// Adjust this import to where your libraries.ts is located
-import { getLibraries } from '@/api/libraries'
+import {defineStore} from 'pinia'
+import {computed} from 'vue'
+import type {Library} from '@/types/external/LibraryTypes'
+import {getLibraries} from '@/api/libraries'
 
 export const useLibrariesStore = defineStore('libraries', () => {
-  // Reuse your existing axios/useAxios logic
   const { data, isLoading, isFinished, error, executeLatest, abort } = getLibraries()
-  const localData = ref<Library[]>([])
-  console.log(getLibraries())
-  // Provide a stable, typed list for consumers
+
   const items = computed<Library[]>(() => data.value ?? [])
-  // Simple action that triggers the existing request
-  async function loadAll() {
-    console.log('Loading libraries')
+
+  async function loadAll(options?: { force?: boolean }) {
+    if (!options?.force && (data.value?.length ?? 0) > 0) {
+      return
+    }
     await executeLatest().catch(() => {
-      console.log('Error loading libraries')
+      // Swallow; error is already reflected in `error`
     })
   }
 
-  // Optional: clear the cached list if you need to reset the store
   function reset() {
-    localData.value = []
     abort()
   }
 

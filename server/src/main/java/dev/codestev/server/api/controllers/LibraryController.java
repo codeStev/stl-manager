@@ -41,10 +41,16 @@ public class LibraryController {
         var ref = libraryService.getLibrary(id);
         return libraryDtoMapper.toDto(ref);
     }
+    @GetMapping
+    public List<LibraryDto> getAllLibs() {
+        var ref = libraryService.listLibraries();
+        return libraryDtoMapper.toDtoList(ref);
+    }
 
     @GetMapping("/{id}/model")
     public List<ModelDetailedDto> list(@PathVariable long id) {
         List<ModelDetailed> allModelDetailsByLibraryId = modelService.getAllModelDetailsByLibraryId(id);
+        //allModelDetailsByLibraryId.forEach(x -> x.variants().forEach(v -> v.stlFiles().addAll(x.stlFiles())));
         return allModelDetailsByLibraryId.stream().map(modelDtoMapper::toDetailedDto).toList();
     }
 }

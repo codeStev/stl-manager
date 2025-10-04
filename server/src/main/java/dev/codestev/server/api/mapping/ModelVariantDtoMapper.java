@@ -24,10 +24,8 @@ public interface ModelVariantDtoMapper {
     @Mapping(target = "id",             source = "id")
     @Mapping(target = "name",           source = "name")
     @Mapping(target = "inheritBaseFiles", source = "inheritBaseFiles")
-    @Mapping(target = "stlFiles",       source = "stlFiles")
-    @Mapping(target = "effectiveFiles", ignore = true)
+    @Mapping(target = "effectiveFiles",       source = "stlFiles")
     ModelVariantDetailedDto toDetailedDto(ModelVariantDetails details);
 
-    List<ModelVariantRefDto> toRefDtoList(List<ModelVariantDetails> refs);
     List<StlFileRefDto> toStlFileRefDtoList(Set<dev.codestev.server.business.model.StlFileRef> refs);
 }

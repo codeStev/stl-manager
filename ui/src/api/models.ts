@@ -1,11 +1,11 @@
 import axios, {type AxiosError} from 'axios'
 import {useAxios} from '@vueuse/integrations/useAxios'
 import {ref, type Ref, type UnwrapRef, watchEffect} from "vue";
-import type {Library} from "@/types/external/LibraryTypes.ts";
+import type {ModelDetails} from "@/types/external/ModelTypes.ts";
 import {instance} from "@/api/axios.ts";
 
-export function getLibraries(): {
-  data: Ref<Library[] | undefined>;
+export function getModelsForLibrary(id: number): {
+  data: Ref<ModelDetails[] | undefined>;
   isLoading: Ref<boolean>;
   isFinished: Ref<boolean>;
   error: Ref<UnwrapRef<string | null>, UnwrapRef<string | null> | string | null>;
@@ -19,7 +19,7 @@ export function getLibraries(): {
     error: rawError,
     execute,
     abort,
-  } = useAxios<Library[]>('/libraries', {method: 'GET'}, instance, {
+  } = useAxios<ModelDetails[]>(`/libraries/${id}/model`, {method: 'GET'}, instance, {
     immediate: false,
     resetOnExecute: false,
   })

@@ -1,5 +1,6 @@
 package dev.codestev.server.business.mapping;
 
+import dev.codestev.server.business.model.StlFileDetails;
 import dev.codestev.server.business.model.StlFileRef;
 import dev.codestev.server.persistence.model.StlFile;
 import org.mapstruct.Mapper;
@@ -11,5 +12,7 @@ import java.util.Set;
 public interface StlFileMapper {
     StlFileRef toRef(StlFile entity);
     List<StlFileRef> toRefList(Set<StlFile> entities);
+    StlFileDetails toDetails(StlFile entity);
+    List<StlFileDetails> toDetailsList(Set<StlFile> entities);
 }
 

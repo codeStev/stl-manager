@@ -1,11 +1,11 @@
 package dev.codestev.server.business.model;
 
-import java.util.List;
+import java.util.Set;
 
 public record ModelVariantDetails(
         Long id,
         String name,
-        List<StlFileRef> stlFiles,
+        Set<StlFileRef> stlFiles,
         boolean inheritBaseFiles
 ) {}
 
