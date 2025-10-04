@@ -1,7 +1,7 @@
-package dev.codestev.server.api;
+package dev.codestev.server.api.controllers;
 
 import dev.codestev.server.api.dto.CreateLibraryRequest;
-import dev.codestev.server.api.dto.LibraryDto;
+import dev.codestev.server.api.dto.common.LibraryDto;
 import dev.codestev.server.api.mapping.LibraryDtoMapper;
 import dev.codestev.server.business.service.LibraryService;
 import org.springframework.http.HttpStatus;
@@ -34,7 +34,7 @@ public class LibraryController {
         return libraryDtoMapper.toDto(ref);
     }
 
-    @GetMapping
+    @GetMapping("/{id}/model")
     public List<LibraryDto> list() {
         var refs = libraryService.listLibraries();
         return libraryDtoMapper.toDtoList(refs);

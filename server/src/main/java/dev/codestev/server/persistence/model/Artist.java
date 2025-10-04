@@ -14,15 +14,14 @@ import java.util.Objects;
                 @Index(name = "idx_artist_homepage", columnList = "homepage")
         },
         uniqueConstraints = {
-                // Prevent exact duplicates; allows same name with different or null homepage
-                @UniqueConstraint(name = "uk_artist_name_homepage", columnNames = {"name", "homepage"})
+                @UniqueConstraint(name = "uk_artist_name", columnNames = {"name"})
         }
 )
 public class Artist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String id;
+    private Long id;
     private String name;
     private String homepage;
 
@@ -30,11 +29,11 @@ public class Artist {
     @OrderBy("name ASC")
     private List<Model> models = new ArrayList<>();
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

@@ -1,4 +1,4 @@
-package dev.codestev.server.api.dto;
+package dev.codestev.server.api.dto.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
