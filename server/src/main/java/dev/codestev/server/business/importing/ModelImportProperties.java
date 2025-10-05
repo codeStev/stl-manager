@@ -19,7 +19,7 @@ public class ModelImportProperties {
      * If true, models present in DB but missing on disk will be deleted.
      * If false, they’re left untouched.
      */
-    private boolean deleteOrphans = true;
+    private boolean deleteOrphans = false;
 
     /**
      * Optional scheduled scanning (in addition to startup). Disabled by default.

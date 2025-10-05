@@ -86,11 +86,11 @@ public class ModelImportServiceImpl implements ModelImportService {
 
                 // Delete orphans (models not found on disk)
                 if (props.isDeleteOrphans()) {
-                    Set<String> scannedNames = scanned.keySet();
-                    for (var orphan : existing.values()) {
-                        Artist artist = artistGateway.findById(orphan.artistId());
-                        if (!scannedNames.contains(artist != null ? artist.getName() + "/" + orphan.name() : orphan.name())) {
-                            deleteModel(orphan);
+                    Set<String> scannedKeys = scanned.keySet();
+                    // existing is a Map<String, ExistingModel>; compare by keys directly
+                    for (String existingKey : existing.keySet()) {
+                        if (!scannedKeys.contains(existingKey)) {
+                            deleteModel(existing.get(existingKey));
                         }
                     }
                 } else {
@@ -106,15 +106,16 @@ public class ModelImportServiceImpl implements ModelImportService {
     }
 
     private void createModel(FilesystemModelScanner.ScannedModel scannedModel, Library library) {
-        log.info("Creating model '{}'", scannedModel.name());
+        // Ensure this uses the correct property for the model's name
+        final String modelName = scannedModel.name(); // if this is the intended name field
+        log.info("Creating model '{}'", modelName);
 
-        // Ensure artist exists and attach to model
         Long artistId = null;
         if (scannedModel.artist() != null && !scannedModel.artist().isBlank()) {
             artistId = artistGateway.getOrCreateArtist(scannedModel.artist());
         }
+        long modelId = modelGateway.getOrCreateModel(modelName, library, artistId);
 
-        long modelId = modelGateway.createModel(scannedModel.model(), library, artistId);
 
         // Prepare variant ids for any named variants
         Map<String, Long> variantIds = new HashMap<>();
@@ -225,7 +226,7 @@ public class ModelImportServiceImpl implements ModelImportService {
         Map<String, ExistingModel> loadAllModelsAsMapByNameAndLibrary(long libraryId);
 
         // Create model with optional artist ownership
-        long createModel(String name, Library library, Long artistId);
+        long getOrCreateModel(String name, Library library, Long artistId);
 
         // Update artist association on an existing model (can be set to null)
         void updateModelArtist(long modelId, Long artistId);

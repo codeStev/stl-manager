@@ -52,7 +52,7 @@ public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
                 model.addVariant(variant);
             }
 
-            stlFileRepository.save(file);
+            modelRepository.save(model);
 
             log.debug("Inserted STL {} for model {}", relativePath, modelId);
         } else {

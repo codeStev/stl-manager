@@ -2,7 +2,6 @@ package dev.codestev.server.business.importing.gateways;
 
 import dev.codestev.server.business.importing.ModelImportServiceImpl;
 import dev.codestev.server.persistence.ArtistRepository;
-import dev.codestev.server.persistence.LibraryRepository;
 import dev.codestev.server.persistence.ModelRepository;
 import dev.codestev.server.persistence.StlFileRepository;
 import dev.codestev.server.persistence.model.Artist;
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
@@ -23,7 +21,6 @@ public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
     private final ArtistRepository artistRepository;
 
     ModelGatewayJpa(
-            LibraryRepository libraryRepository,
             ModelRepository modelRepository,
             StlFileRepository stlFileRepository,
             ArtistRepository artistRepository
@@ -37,12 +34,13 @@ public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
     @Transactional(readOnly = true)
     public Map<String, ModelImportServiceImpl.ExistingModel> loadAllModelsAsMapByNameAndLibrary(long libraryId) {
         Map<String, ModelImportServiceImpl.ExistingModel> map = new LinkedHashMap<>();
+
         for (var m : modelRepository.findAllByLibrary_Id(libraryId)) {
             String key = composeKey(m.getArtist(), m.getName());
 
             Map<String, ModelImportServiceImpl.ExistingStl> stls = new LinkedHashMap<>();
             for (var f : stlFileRepository.findAllByModels_Id(m.getId())) {
-                stls.put(
+                stls.putIfAbsent(
                         f.getStoragePath(),
                         new ModelImportServiceImpl.ExistingStl(
                                 f.getId(),
@@ -52,28 +50,40 @@ public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
                         )
                 );
             }
-            Long artistId = m.getArtist().getId();
-            Map<String, ModelImportServiceImpl.ExistingVariant> modelVariants = m.getVariants().stream().map(x -> new ModelImportServiceImpl.ExistingVariant(x.getId(), x.getName())).collect(Collectors.toMap(ModelImportServiceImpl.ExistingVariant::name, v -> v));
-            map.put(key, new ModelImportServiceImpl.ExistingModel(m.getId(), m.getName(),artistId, modelVariants, stls));
+
+            Long artistId = (m.getArtist() != null) ? m.getArtist().getId() : null;
+
+            Map<String, ModelImportServiceImpl.ExistingVariant> modelVariants = new LinkedHashMap<>();
+            if (m.getVariants() != null) {
+                for (var x : m.getVariants()) {
+                    modelVariants.putIfAbsent(x.getName(), new ModelImportServiceImpl.ExistingVariant(x.getId(), x.getName()));
+                }
+            }
+
+            map.putIfAbsent(key, new ModelImportServiceImpl.ExistingModel(m.getId(), m.getName(), artistId, modelVariants, stls));
         }
         return map;
     }
 
     @Override
     @Transactional
-    public long createModel(String name, Library library, Long artistId) {
-        var model = new Model();
-        model.setName(name);
-        model.setLibrary(library);
+    public long getOrCreateModel(String name, Library library, Long artistId) {
 
-        if (artistId != null) {
-            var artistRef = artistRepository.getReferenceById(artistId);
-            model.setArtist(artistRef);
-        } else {
-            model.setArtist(null);
+        Model foundModel = modelRepository.findByNameAndLibraryAndArtist_Id(name, library, artistId).orElse(null);
+
+        if (foundModel != null) {
+            return foundModel.getId();
         }
-
-        return modelRepository.save(model).getId();
+            var model = new Model();
+            model.setName(name);
+            model.setLibrary(library);
+            if (artistId != null) {
+                var artistRef = artistRepository.getReferenceById(artistId);
+                model.setArtist(artistRef);
+            } else {
+                model.setArtist(null);
+            }
+            return modelRepository.save(model).getId();
     }
 
     @Override
@@ -81,20 +91,19 @@ public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
     public void updateModelArtist(long modelId, Long artistId) {
         var model = modelRepository.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
-
         if (artistId == null) {
             model.setArtist(null);
         } else {
             var artistRef = artistRepository.getReferenceById(artistId);
             model.setArtist(artistRef);
         }
-
-        modelRepository.save(model);
+        // No explicit save needed; the managed entity will be flushed at transaction commit.
     }
 
     @Override
     @Transactional
     public void deleteModel(long modelId) {
+        // WARNING: ensure this deletes only associations, not shared STL entities.
         stlFileRepository.deleteAllByModels_Id(modelId);
         modelRepository.deleteById(modelId);
     }

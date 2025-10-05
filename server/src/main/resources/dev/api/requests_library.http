@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
   "library_name": "stltestlib",
-  "library_path": "/home/{{user_folder}}/stltestlib2"
+  "library_path": "/home/{{user_folder}}/stltestlib"
 }
 ###
 
