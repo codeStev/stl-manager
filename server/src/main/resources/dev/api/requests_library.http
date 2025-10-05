@@ -1,0 +1,21 @@
+### POST Create new Library
+POST http://localhost:8080/api/libraries
+Content-Type: application/json
+
+{
+  "library_name": "stltestlib",
+  "library_path": "/home/{{user_folder}}/stltestlib"
+}
+###
+
+### GET get all Libraries
+GET http://localhost:8080/api/libraries
+
+### GET get all Models of library
+GET http://localhost:8080/api/libraries/{{library_id}}/model
+
+### GET get Library by Id
+GET http://localhost:8080/api/libraries/{{library_id}}
+
+### GET get File by Id
+GET http://localhost:8080/api/file/315
