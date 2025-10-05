@@ -10,6 +10,6 @@ public record ModelDetailed(
         ImageInfo thumbnail,
         List<ModelPreview> previews,
         List<StlFileRef> stlFiles,
-        List<ModelVariantRef> variants
+        List<ModelVariantDetails> variants
 ) {}
 

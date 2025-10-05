@@ -4,7 +4,9 @@ package dev.codestev.server.persistence.model;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -33,6 +35,9 @@ public class StlFile {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    @ManyToMany(mappedBy = "stlFiles", fetch = FetchType.LAZY)
+    private Set<Model> models = new LinkedHashSet<>();
 
     public Long getId() {
         return id;
@@ -80,6 +85,33 @@ public class StlFile {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Set<Model> getModels() {
+        return models;
+    }
+
+    public void setModels(Set<Model> models) {
+        this.models = models;
+    }
+
+    public void addModel(Model model) {
+        models.add(model);
+        model.getStlFiles().add(this);
+    }
+
+    public void removeModel(Model model) {
+        models.remove(model);
+        model.getStlFiles().remove(this);
+        if (model.getStlFiles().isEmpty()) {
+            model.setStlFiles(null);
+        }
+        if (model.getVariants().isEmpty()) {
+            model.setVariants(null);
+        }
+        if (model.getPreviews().isEmpty()) {
+            model.setPreviews(null);
+        }
     }
 
     @Override

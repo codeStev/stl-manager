@@ -21,14 +21,20 @@ public class Model {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "library_id", nullable = false)
     private Library library;
-    @ManyToMany
+
+    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(
             name = "model_stl_files",
             joinColumns = @JoinColumn(name = "model_id"),
-            inverseJoinColumns = @JoinColumn(name = "stl_file_id")
+            inverseJoinColumns = @JoinColumn(name = "stl_file_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_model_stl_file",
+                    columnNames = { "model_id", "stl_file_id" }
+            )
     )
     @OrderBy("fileName ASC")
-    private Set<StlFile> stlFiles = new HashSet<>();
+    private Set<StlFile> stlFiles = new LinkedHashSet<>();
+
 
     @OneToMany(mappedBy = "model", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("name ASC")
@@ -80,14 +86,6 @@ public class Model {
         this.library = library;
     }
 
-    public Set<StlFile> getStlFiles() {
-        return stlFiles;
-    }
-
-    public void setStlFiles(Set<StlFile> stlFiles) {
-        this.stlFiles = stlFiles;
-    }
-
     public List<ModelVariant> getVariants() {
         return variants;
     }
@@ -105,6 +103,7 @@ public class Model {
     }
 
     public void addVariant(ModelVariant variant) {
+        if (variants.contains(variant)) return;
         variants.add(variant);
         variant.setModel(this);
     }
@@ -162,6 +161,37 @@ public class Model {
     public void removePreview(ModelPreview preview) {
         previews.remove(preview);
         preview.setModel(null);
+    }
+
+    public Set<StlFile> getStlFiles() {
+        return stlFiles;
+    }
+
+    public void setStlFiles(Set<StlFile> stlFiles) {
+        this.stlFiles = stlFiles;
+    }
+
+    // Convenience methods to maintain both sides
+    public void addStlFile(StlFile file) {
+        if (stlFiles.add(file)) {
+            file.getModels().add(this);
+        }
+    }
+
+    public void removeStlFile(StlFile file) {
+        if (stlFiles.remove(file)) {
+            file.getModels().remove(this);
+        }
+    }
+
+
+    @Transient
+    public Set<StlFile> getEffectiveFiles() {
+        Set<StlFile> result = new HashSet<>(stlFiles);
+        for (ModelVariant variant : variants) {
+            result.addAll(variant.getEffectiveFiles());
+        }
+        return result;
     }
 
 }

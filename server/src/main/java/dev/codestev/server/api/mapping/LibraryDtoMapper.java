@@ -1,6 +1,6 @@
 package dev.codestev.server.api.mapping;
 
-import dev.codestev.server.api.dto.LibraryDto;
+import dev.codestev.server.api.dto.common.LibraryDto;
 import dev.codestev.server.business.model.LibraryRef;
 import org.mapstruct.Mapper;
 

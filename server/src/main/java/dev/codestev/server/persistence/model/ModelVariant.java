@@ -56,6 +56,7 @@ public class ModelVariant {
 
     public void setModel(Model model) {
         this.model = model;
+        model.addVariant(this);
     }
 
     public Set<StlFile> getStlFiles() {
@@ -92,4 +93,9 @@ public class ModelVariant {
     @Override
     public int hashCode() { return Objects.hashCode(id); }
 
+    public void addStlFile(StlFile file) {
+        if (file != null && !stlFiles.contains(file) && model.getStlFiles().contains(file)){
+            stlFiles.add(file);
+        }
+    }
 }
