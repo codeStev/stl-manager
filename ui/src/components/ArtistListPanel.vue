@@ -44,7 +44,10 @@ function selectArtist(id: number) {
 </script>
 
 <template>
-
+  <v-card>
+    <v-card-title>Artists</v-card-title>
+    <v-divider />
+    <v-card-text class="panel-scroll">
   <div v-if="selectedLibraryId == null" class="text-medium-emphasis">
     Select a library to see artists.
   </div>
@@ -60,10 +63,19 @@ function selectArtist(id: number) {
           :key="artist.id"
           :title="artist.name"
           :active="artist.id === selectedArtistId"
-          @click="selectArtist(artist.id)"
-        />
+          @click="selectArtist(artist.id)">
+          <template #prepend>
+            <v-icon icon="mdi-file" />
+          </template>
+          <v-tooltip
+            activator="parent"
+            :text="artist?.name ?? 'Unknown artist'"
+          />
+        </v-list-item>
       </v-list>
   <div v-else-if="isFinished" class="text-medium-emphasis">
     No models found.
   </div>
+    </v-card-text>
+  </v-card>
 </template>
