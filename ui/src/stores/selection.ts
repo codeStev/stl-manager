@@ -4,12 +4,21 @@ import {ref} from 'vue'
 
 export const useSelectionStore = defineStore('selection', () => {
   const selectedLibraryId = ref<number | null>(null)
+  const selectedArtistId = ref<number | null>(null)
   const selectedModelId = ref<number | null>(null)
   const selectedVariantId = ref<number | null>(null)
   const selectedFileId = ref<number | null>(null)
 
   function selectLibrary(id: number | null) {
     selectedLibraryId.value = id
+    // Cascade reset
+    selectedArtistId.value = null
+    selectedModelId.value = null
+    selectedVariantId.value = null
+    selectedFileId.value = null
+  }
+  function selectArtist(id: number | null) {
+    selectedArtistId.value = id
     // Cascade reset
     selectedModelId.value = null
     selectedVariantId.value = null
@@ -39,10 +48,12 @@ export const useSelectionStore = defineStore('selection', () => {
 
   return {
     selectedLibraryId,
+    selectedArtistId,
     selectedModelId,
     selectedVariantId,
     selectedFileId,
     selectLibrary,
+    selectArtist,
     selectModel,
     selectVariant,
     selectFile,

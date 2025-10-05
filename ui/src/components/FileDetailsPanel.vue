@@ -50,18 +50,34 @@ onBeforeUnmount(() => entry.value?.abort?.())
           <v-list-item>
             <v-list-item-title>Name</v-list-item-title>
             <v-list-item-subtitle>{{ (details as StlFileDetails)?.fileName}}</v-list-item-subtitle>
+            <v-tooltip
+              activator="parent"
+              :text="details?.fileName"
+            />
           </v-list-item>
           <v-list-item v-if="(details as StlFileDetails)?.sizeBytes">
             <v-list-item-title>Size</v-list-item-title>
             <v-list-item-subtitle>{{ (details as StlFileDetails)?.sizeBytes }} bytes</v-list-item-subtitle>
+            <v-tooltip
+              activator="parent"
+              :text="String(details?.sizeBytes) + ' bytes'"
+            />
           </v-list-item>
           <v-list-item v-if="(details as StlFileDetails)?.storagePath">
             <v-list-item-title>Path</v-list-item-title>
             <v-list-item-subtitle>{{ (details as StlFileDetails)?.storagePath }}</v-list-item-subtitle>
+            <v-tooltip
+              activator="parent"
+              :text="details?.storagePath"
+            />
           </v-list-item>
           <v-list-item v-if="(details as StlFileDetails)?.createdAt">
             <v-list-item-title>Created</v-list-item-title>
             <v-list-item-subtitle>{{ (details as StlFileDetails)?.createdAt }}</v-list-item-subtitle>
+            <v-tooltip
+              activator="parent"
+              :text="String(details?.createdAt)"
+            />
           </v-list-item>
         </v-list>
       </div>

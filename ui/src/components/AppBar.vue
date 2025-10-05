@@ -35,12 +35,16 @@ export default {}
         <v-list-item
           v-for="item in items"
           :key="item.library_id"
-          @click="onLibraryClick(item.library_id)"
+          @click="onLibraryClick(item?.library_id)"
           link
         >
-          <v-list-item-title>{{ item.library_name }}</v-list-item-title>
-          <v-list-item-subtitle>{{ item.library_path }}</v-list-item-subtitle>
+          <v-list-item-title>{{ item?.library_name }}</v-list-item-title>
+          <v-list-item-subtitle>{{ item?.library_path }}</v-list-item-subtitle>
           <v-list-item-action />
+          <v-tooltip
+            activator="parent"
+            :text="item?.library_path"
+          />
         </v-list-item>
       </v-list>
 

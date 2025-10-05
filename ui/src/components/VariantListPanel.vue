@@ -7,13 +7,13 @@ import {useLibraryModelsStore} from "@/stores/models.ts";
 import type {ModelVariant} from "@/types/external/ModelTypes.ts";
 
 const selection = useSelectionStore()
-const { selectedLibraryId, selectedModelId, selectedVariantId } = storeToRefs(selection)
+const { selectedLibraryId, selectedArtistId, selectedModelId, selectedVariantId } = storeToRefs(selection)
 
 const modelStore = useLibraryModelsStore()
 
 const entry = computed(() =>
-  selectedLibraryId.value != null && selectedModelId.value != null
-    ? modelStore.getVariantsByModelId(selectedLibraryId.value,selectedModelId.value)
+  selectedLibraryId.value != null && selectedArtistId.value != null && selectedModelId.value != null
+    ? modelStore.getVariantsByModelId(selectedLibraryId.value, selectedModelId.value)
     : null
 )
 
@@ -23,6 +23,7 @@ function pickVariant(variantId: number) {
   selection.selectVariant(variantId)
 }
 </script>
+
 
 <template>
   <v-card>
@@ -37,14 +38,17 @@ function pickVariant(variantId: number) {
         <v-list v-if="data">
           <v-list-item
             v-for="variant in data"
-            :key="(variant as any)?.id ?? (variant as any)?.variant_id"
-            :active="selectedVariantId === ((variant as any)?.id ?? (variant as any)?.variant_id)"
-            @click="pickVariant((variant as any)?.id ?? (variant as any)?.variant_id)"
+            :key="variant?.id"
+            :active="selectedVariantId === (variant?.id)"
+            @click="pickVariant(variant?.id)"
             density="comfortable"
             clickable
           >
-            <v-list-item-title>{{ (variant as ModelVariant)?.name ?? (variant as any)?.variant_name ?? 'Variant' }}</v-list-item-title>
-            <v-list-item-subtitle>{{ (variant as any)?.description ?? '' }}</v-list-item-subtitle>
+            <v-list-item-title>{{ (variant as ModelVariant)?.name ?? 'Unknown' }}</v-list-item-title>
+            <v-tooltip
+              activator="parent"
+              :text="variant?.name"
+            />
           </v-list-item>
         </v-list>
 

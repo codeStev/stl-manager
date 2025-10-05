@@ -33,17 +33,27 @@ export const useLibraryModelsStore = defineStore('libraryModels', () => {
     cache.set(libraryId, entry)
     return entry
   }
-//TODO remove
-  function getSingleModel(libraryId: number, modelId: number): ModelDetails | undefined {
-    let models = cache.get(libraryId)?.data?.value;
-    console.log(models)
+
+  function getModelsByArtistId(libraryId: number, artistId: number): ModelDetails[] | undefined {
+    let models = getEntry(libraryId)?.data?.value;
     if (!models) return undefined;
-    console.log(models)
-    return models[0]
+    return models.filter(model => model.artist.id === artistId);
+  }
+
+  function getArtistsByLibraryId(libraryId: number) {
+    const models = getEntry(libraryId)?.data?.value;
+    if (!models) return undefined;
+
+    // Deduplicate by artist.id (Map keeps the last seen artist object per id)
+    const byId = new Map<number, ModelDetails['artist']>(
+        models.map(m => [m.artist.id, m.artist])
+    );
+
+    return [...byId.values()];
   }
 
   function getVariantsByModelId(libraryId: number, modelId: number): ModelVariant[] | undefined {
-    let models = cache.get(libraryId)?.data?.value;
+    let models = getEntry(libraryId)?.data?.value;
     console.log(models)
     if (!models) return undefined;
     return models.find(x => x.id == modelId)?.variants
@@ -64,10 +74,13 @@ export const useLibraryModelsStore = defineStore('libraryModels', () => {
     return getEntry(libraryId).abort()
   }
 
+
   return {
     getEntry,
     getVariantsByModelId,
     getFilesByVariantId,
+    getModelsByArtistId,
+    getArtistsByLibraryId,
     load,
     abort,
   }
