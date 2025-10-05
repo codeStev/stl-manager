@@ -8,11 +8,8 @@ import axios from 'axios'
 
 type Props = {
   fileId: number | null
-  // Build the binary download URL for the STL file
   urlBuilder?: (id: number) => string
-  // v-model:open
   open?: boolean
-  // Drawer width in px
   width?: number
 }
 
@@ -44,6 +41,15 @@ let mesh: THREE.Mesh | null = null
 let ro: ResizeObserver | null = null
 let rafId = 0
 
+// Object-rotation state
+let isRotating = false
+let activePointerId: number | null = null
+const lastPointer = new THREE.Vector2()
+const rotateSpeed = 0.005 // radians per pixel; tweak to taste
+
+// Track the last mesh to which the detail look was applied
+let lastMaterialTarget: THREE.Mesh | null = null
+
 function initThree() {
   if (!canvasHost.value) return
 
@@ -53,14 +59,24 @@ function initThree() {
   renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(rect.width, rect.height)
-  div.appendChild(renderer.domElement)
+  // Color management for preserving detail
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.0
+  div.appendChild(renderer!.domElement)
 
   scene = new THREE.Scene()
   // Lights
-  scene.add(new THREE.AmbientLight(0xffffff, 1.0))
-  const dir = new THREE.DirectionalLight(0xffffff, 1.0)
-  dir.position.set(2, 2, 2)
-  scene.add(dir)
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7))
+  const dir1 = new THREE.DirectionalLight(0xffffff, 0.8)
+  dir1.position.set(2, 2, 2)
+  scene.add(dir1)
+  const dir2 = new THREE.DirectionalLight(0xffffff, 0.4)
+  dir2.position.set(-2, -2, -2)
+  scene.add(dir2)
+  const dir3 = new THREE.DirectionalLight(0xffffff, 0.3)
+  dir3.position.set(0, 5, 0)
+  scene.add(dir3)
 
   camera = new THREE.PerspectiveCamera(50, rect.width / rect.height, 0.1, 5000)
   camera.position.set(0, 0, 200)
@@ -68,11 +84,27 @@ function initThree() {
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.08
+  // Disable camera rotation; keep zoom and pan
+  controls.enableRotate = false
+  controls.enableZoom = true
+  controls.enablePan = true
+  controls.mouseButtons = {
+    LEFT: THREE.MOUSE.ROTATE, // disabled by enableRotate=false
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN,
+  }
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE, // disabled by enableRotate=false
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  }
 
-  // Optional grid
-  const grid = new THREE.GridHelper(400, 40, 0x444444, 0x222222)
-  grid.position.y = -80
-  scene.add(grid)
+  // Pointer-based object rotation
+  const dom = renderer.domElement
+  dom.addEventListener('pointerdown', onPointerDown)
+  dom.addEventListener('pointermove', onPointerMove)
+  dom.addEventListener('pointerup', onPointerUpCancel)
+  dom.addEventListener('pointercancel', onPointerUpCancel)
+  dom.addEventListener('lostpointercapture', onPointerUpCancel)
 
   animate()
 
@@ -86,9 +118,98 @@ function initThree() {
   ro.observe(div)
 }
 
+// Best-detail PBR material
+function createDetailMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: 0xB0B0B0,   // neutral mid-gray
+    metalness: 0.05,   // low metalness for plastic/ceramic look
+    roughness: 0.4,    // mid roughness for strong shape cues
+    flatShading: false // set true if you want faceted look
+  })
+}
+
+// Subtle edge overlay to emphasize silhouette/creases
+function addEdgeOverlay(target: THREE.Mesh) {
+  const geom = target.geometry as THREE.BufferGeometry
+  const edgesGeom = new THREE.EdgesGeometry(geom, 20) // threshold angle (degrees)
+  const lines = new THREE.LineSegments(
+    edgesGeom,
+    new THREE.LineBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.25
+    })
+  )
+  lines.name = 'edgesOverlay'
+  target.add(lines)
+}
+
+// Apply material + ensure normals, once per mesh
+function applyDetailLookToMesh(m: THREE.Mesh) {
+  const g = m.geometry as THREE.BufferGeometry
+  if (!g.attributes.normal) g.computeVertexNormals()
+  g.normalizeNormals()
+  m.material = createDetailMaterial()
+  // Add at most one overlay
+  if (!m.getObjectByName('edgesOverlay')) addEdgeOverlay(m)
+}
+
+function onPointerDown(e: PointerEvent) {
+  if (!renderer || !mesh) return
+  const isPrimaryMouse = e.pointerType === 'mouse' && e.button === 0
+  const isTouch = e.pointerType === 'touch'
+  if (!isPrimaryMouse && !isTouch) return
+
+  isRotating = true
+  activePointerId = e.pointerId
+  lastPointer.set(e.clientX, e.clientY)
+  renderer.domElement.setPointerCapture(e.pointerId)
+  renderer.domElement.style.cursor = 'grabbing'
+  e.preventDefault()
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (!isRotating || e.pointerId !== activePointerId) return
+  if (!mesh || !camera) return
+
+  const dx = e.clientX - lastPointer.x
+  const dy = e.clientY - lastPointer.y
+  lastPointer.set(e.clientX, e.clientY)
+
+  const axisY = new THREE.Vector3(0, 1, 0)
+  const axisRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize()
+
+  const qx = new THREE.Quaternion().setFromAxisAngle(axisRight, dy * rotateSpeed)
+  const qy = new THREE.Quaternion().setFromAxisAngle(axisY, dx * rotateSpeed)
+
+  mesh.quaternion.premultiply(qy)
+  mesh.quaternion.premultiply(qx)
+
+  e.preventDefault()
+}
+
+function onPointerUpCancel(e: PointerEvent) {
+  if (e.pointerId !== activePointerId) return
+  isRotating = false
+  activePointerId = null
+  if (renderer) {
+    try { renderer.domElement.releasePointerCapture(e.pointerId) } catch {}
+    renderer.domElement.style.cursor = 'default'
+  }
+}
+
 function disposeThree() {
   if (ro && canvasHost.value) ro.unobserve(canvasHost.value)
   ro = null
+
+  if (renderer) {
+    const dom = renderer.domElement
+    dom.removeEventListener('pointerdown', onPointerDown)
+    dom.removeEventListener('pointermove', onPointerMove)
+    dom.removeEventListener('pointerup', onPointerUpCancel)
+    dom.removeEventListener('pointercancel', onPointerUpCancel)
+    dom.removeEventListener('lostpointercapture', onPointerUpCancel)
+  }
 
   if (controls) {
     controls.dispose()
@@ -96,8 +217,20 @@ function disposeThree() {
   }
 
   if (mesh) {
-    mesh.geometry.dispose()
-    ;(mesh.material as THREE.Material).dispose()
+    // Dispose mesh and any overlays (like edges) safely
+    mesh.traverse((obj: THREE.Object3D) => {
+      const anyObj = obj as any
+      if (anyObj.geometry && typeof anyObj.geometry.dispose === 'function') {
+        anyObj.geometry.dispose()
+      }
+      if (anyObj.material) {
+        if (Array.isArray(anyObj.material)) {
+          anyObj.material.forEach((m: THREE.Material) => m?.dispose?.())
+        } else {
+          (anyObj.material as THREE.Material)?.dispose?.()
+        }
+      }
+    })
     scene?.remove(mesh)
     mesh = null
   }
@@ -118,14 +251,23 @@ function disposeThree() {
   }
 
   camera = null
+  lastMaterialTarget = null
 }
 
 function animate() {
   if (!renderer || !scene || !camera) return
   rafId = requestAnimationFrame(animate)
+
+  // Auto-apply the detail look whenever a new mesh is set
+  if (mesh && mesh !== lastMaterialTarget) {
+    applyDetailLookToMesh(mesh)
+    lastMaterialTarget = mesh
+  }
+
   controls?.update()
   renderer.render(scene, camera)
 }
+
 
 async function loadStl(id: number) {
   if (!scene) initThree()
@@ -155,9 +297,9 @@ async function loadStl(id: number) {
     geometry.computeVertexNormals()
 
     const material = new THREE.MeshStandardMaterial({
-      color: 0x9eb6ff,
-      metalness: 0.05,
-      roughness: 0.8,
+      color: 0xAEB7D4,
+      metalness: 0.2,
+      roughness: 0.6,
     })
 
     mesh = new THREE.Mesh(geometry, material)
