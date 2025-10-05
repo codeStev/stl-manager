@@ -3,6 +3,7 @@ import ModelListPanel from "@/components/ModelListPanel.vue";
 import VariantListPanel from "@/components/VariantListPanel.vue";
 import FileListPanel from "@/components/FileListPanel.vue";
 import FileDetailsPanel from "@/components/FileDetailsPanel.vue";
+import PreviewView from "@/views/PreviewView.vue";
 </script>
 
 <template>
@@ -24,6 +25,7 @@ import FileDetailsPanel from "@/components/FileDetailsPanel.vue";
         <FileDetailsPanel />
       </v-col>
     </v-row>
+    <PreviewView></PreviewView>
   </v-container>
 </template>
 
