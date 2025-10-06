@@ -88,6 +88,22 @@ public class ModelGatewayJpa implements ModelImportServiceImpl.ModelGateway {
 
     @Override
     @Transactional
+    public long createModel(String name, Library library, Long artistId){
+
+        var model = new Model();
+        model.setName(name);
+        model.setLibrary(library);
+        if (artistId != null) {
+            var artistRef = artistRepository.getReferenceById(artistId);
+            model.setArtist(artistRef);
+        } else {
+            model.setArtist(null);
+        }
+        return modelRepository.save(model).getId();
+    }
+
+    @Override
+    @Transactional
     public void updateModelArtist(long modelId, Long artistId) {
         var model = modelRepository.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));

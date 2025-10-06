@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 
@@ -26,9 +28,10 @@ public class ModelImportConfig {
             ModelImportServiceImpl.ModelGateway modelGateway,
             ModelImportServiceImpl.StlFileGateway stlGateway,
             ModelImportServiceImpl.ArtistGateway artistGateway,
-            ModelImportServiceImpl.VariantGateway variantGateway
+            ModelImportServiceImpl.VariantGateway variantGateway,
+            PlatformTransactionManager txManager
     ) {
-        return new ModelImportServiceImpl(props, scanner, libraryGateway, modelGateway, stlGateway, artistGateway, variantGateway);
+        return new ModelImportServiceImpl(props, scanner, libraryGateway, modelGateway, stlGateway, artistGateway, variantGateway, new TransactionTemplate(txManager));
     }
 
     @Bean

@@ -6,7 +6,7 @@ import {useSelectionStore} from '@/stores/selection'
 import {useLibraryModelsStore} from '@/stores/models'
 
 const selection = useSelectionStore()
-const { selectedLibraryId, selectedArtistId, selectedModelId } = storeToRefs(selection)
+const {selectedLibraryId, selectedArtistId, selectedModelId} = storeToRefs(selection)
 
 const modelsStore = useLibraryModelsStore()
 
@@ -26,7 +26,7 @@ function pickModel(modelId: number) {
 <template>
   <v-card>
     <v-card-title>Models</v-card-title>
-    <v-divider />
+    <v-divider/>
     <v-card-text class="panel-scroll">
       <div v-if="selectedLibraryId == null" class="text-medium-emphasis">
         Select a library to see models.
@@ -42,7 +42,7 @@ function pickModel(modelId: number) {
             density="comfortable"
             clickable
           >
-            <v-list-item-title>{{ model?.name ?? 'Model' }}</v-list-item-title>
+            <v-list-item-title>{{ model?.name ?? 'Unknown' }}</v-list-item-title>
             <v-tooltip
               activator="parent"
               :text="model?.name"

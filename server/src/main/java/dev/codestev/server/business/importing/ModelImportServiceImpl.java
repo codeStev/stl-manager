@@ -4,11 +4,12 @@ import dev.codestev.server.persistence.model.Artist;
 import dev.codestev.server.persistence.model.Library;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ModelImportServiceImpl implements ModelImportService {
@@ -23,6 +24,8 @@ public class ModelImportServiceImpl implements ModelImportService {
     private final ArtistGateway artistGateway;
     private final VariantGateway variantGateway;
 
+    private final TransactionTemplate tx;
+
     private final ReentrantLock runLock = new ReentrantLock();
 
     public ModelImportServiceImpl(
@@ -32,7 +35,8 @@ public class ModelImportServiceImpl implements ModelImportService {
             ModelGateway modelGateway,
             StlFileGateway stlGateway,
             ArtistGateway artistGateway,
-            VariantGateway variantGateway
+            VariantGateway variantGateway,
+            TransactionTemplate tx
     ) {
         this.props = Objects.requireNonNull(props, "props");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
@@ -41,17 +45,22 @@ public class ModelImportServiceImpl implements ModelImportService {
         this.stlGateway = Objects.requireNonNull(stlGateway, "stlGateway");
         this.artistGateway = Objects.requireNonNull(artistGateway, "artistGateway");
         this.variantGateway = Objects.requireNonNull(variantGateway, "variantGateway");
+        this.tx = tx;
     }
 
     @Override
-    @Transactional
     public void runFullSync() {
         if (!runLock.tryLock()) {
             log.info("Model import already running, skipping");
             return;
         }
 
-        try {
+        long started = System.nanoTime();
+
+        final int writeParallelism = 1;
+        final Semaphore dbPermits = new Semaphore(writeParallelism);
+
+        try (ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Library> libraries = libraryGateway.getAllLibraries();
             if (libraries.isEmpty()) {
                 log.warn("Model import skipped: no libraries exist");
@@ -72,16 +81,28 @@ public class ModelImportServiceImpl implements ModelImportService {
                 // Fetch current DB state (business view)
                 Map<String, ExistingModel> existing = modelGateway.loadAllModelsAsMapByNameAndLibrary(library.getId());
 
+                List<Callable<Void>> tasks = new ArrayList<>(scanned.size());
                 // Create or update
                 for (var entry : scanned.entrySet()) {
-                    String modelKey = entry.getKey(); // composite "Artist/Model" from scanner
-                    var scannedModel = entry.getValue();
+                    tasks.add(() -> {
+                        dbPermits.acquire();
+                        try {
+                            tx.executeWithoutResult(status -> {
+                                String modelKey = entry.getKey(); // composite "Artist/Model" from scanner
+                                var scannedModel = entry.getValue();
 
-                    if (!existing.containsKey(modelKey)) {
-                        createModel(scannedModel, library);
-                    } else {
-                        updateModel(existing.get(modelKey), scannedModel);
-                    }
+                                if (!existing.containsKey(modelKey)) {
+                                    createModel(scannedModel, library);
+                                } else {
+                                    updateModel(existing.get(modelKey), scannedModel);
+                                }
+                            });
+                        } finally {
+                            dbPermits.release();
+                        }
+                        return null;
+
+                    });
                 }
 
                 // Delete orphans (models not found on disk)
@@ -99,22 +120,38 @@ public class ModelImportServiceImpl implements ModelImportService {
 
                 log.info("Model import finished for {}. Scanned models: {}, Existing (before): {}",
                         library.getName(), scanned.size(), existing.size());
+                List<Future<Void>> futures = exec.invokeAll(tasks);
+                for (Future<Void> f : futures) {
+                    // Any exception from a task will be rethrown here
+                    f.get();
+                }
+
             }
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+            log.info("Full sync completed in {} ms (writeParallelism={})",
+                    elapsedMs, writeParallelism);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            log.warn("Full sync interrupted", ie);
+        } catch (ExecutionException ee) {
+            // Root cause from a task
+            Throwable cause = ee.getCause() == null ? ee : ee.getCause();
+            log.error("Full sync failed", cause);
+            throw new RuntimeException(cause);
         } finally {
             runLock.unlock();
         }
     }
 
     private void createModel(FilesystemModelScanner.ScannedModel scannedModel, Library library) {
-        // Ensure this uses the correct property for the model's name
-        final String modelName = scannedModel.name(); // if this is the intended name field
-        log.info("Creating model '{}'", modelName);
+        final String modelName = scannedModel.model();
+        log.info("Upsert model '{}'", modelName);
 
         Long artistId = null;
         if (scannedModel.artist() != null && !scannedModel.artist().isBlank()) {
             artistId = artistGateway.getOrCreateArtist(scannedModel.artist());
         }
-        long modelId = modelGateway.getOrCreateModel(modelName, library, artistId);
+        long modelId = modelGateway.createModel(modelName, library, artistId);
 
 
         // Prepare variant ids for any named variants
@@ -227,6 +264,7 @@ public class ModelImportServiceImpl implements ModelImportService {
 
         // Create model with optional artist ownership
         long getOrCreateModel(String name, Library library, Long artistId);
+        long createModel(String name, Library library, Long artistId);
 
         // Update artist association on an existing model (can be set to null)
         void updateModelArtist(long modelId, Long artistId);

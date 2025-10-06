@@ -8,7 +8,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import javax.sql.DataSource;
 import java.nio.file.Files;
@@ -104,7 +103,7 @@ public class DataSourceConfig {
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl(jdbcUrl);
         cfg.setDriverClassName("org.sqlite.JDBC");
-        cfg.setConnectionInitSql("PRAGMA foreign_keys=ON;");
+        cfg.setConnectionInitSql("PRAGMA foreign_keys=ON;PRAGMA journal_mode=WAL;PRAGMA busy_timeout=5000;");
         cfg.setMaximumPoolSize(5);
         cfg.setPoolName("sqlite");
 
