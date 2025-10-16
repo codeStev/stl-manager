@@ -1,13 +1,20 @@
 plugins {
 	id "java"
-	id "org.springframework.boot" version "3.3.4"
+	id "org.springframework.boot" version "3.5.6"
 	id "io.spring.dependency-management" version "1.1.6"
+	id 'org.graalvm.buildtools.native' version '0.11.1'
+
 }
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
+		vendor = JvmVendorSpec.GRAAL_VM
 	}
+}
+
+test {
+	useJUnitPlatform()
 }
 
 repositories {
@@ -24,15 +31,82 @@ dependencies {
 	annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
 }
 
+/*
+ Native image configuration:
+ - nativeCompile/nativeRun for local GraalVM builds
+ - bootBuildImage with BP_NATIVE_IMAGE=true for buildpack-based native images
+*/
+graalvmNative {
+	toolchainDetection = true
+	// Leverage Spring AOT; additional metadata is usually unnecessary
+	binaries {
+		main {
+			// Set the resulting native executable name
+			imageName = project.name
+			// Helpful defaults; adjust as needed
+			buildArgs.addAll([
+					"--enable-url-protocols=http,https",
+					"--install-exit-handlers",
+					"-H:+ReportExceptionStackTraces"
+			])
+			resources.autodetect()
+		}
+		test {
+			buildArgs.add("--install-exit-handlers")
+			resources.autodetect()
+		}
+	}
+}
+
 tasks.register("prepareUiResources", Copy) {
 	description = "Copy UI build output into server resources for packaging"
+	dependsOn("compileTestJava")
 	dependsOn(":ui:buildUi")
+	dependsOn(":server:processTestAot")
+	dependsOn(":server:compileAotTestJava")
 	from(project(":ui").layout.projectDirectory.dir("dist"))
 	into(layout.buildDirectory.dir("resources/main/static"))
 	mustRunAfter(tasks.named("processResources"))
 }
 
-tasks.named("bootJar") {
+tasks.named('compileAotJava', JavaCompile) {
+	dependsOn(tasks.named("prepareUiResources"))
+}
+tasks.named('processAot') {
 	dependsOn(tasks.named("prepareUiResources"))
 }
 
+// Ensure UI assets are present for native builds
+tasks.named("nativeCompile") {
+	dependsOn(tasks.named("prepareUiResources"))
+}
+tasks.named("nativeTest") {
+	dependsOn(tasks.named("prepareUiResources"))
+}
+
+// Native container image via buildpacks
+tasks.named("bootBuildImage") {
+	dependsOn(tasks.named("prepareUiResources"))
+	builder = "paketobuildpacks/builder-jammy-tiny"
+	imageName = "REPLACE_WITH_REGISTRY/REPLACE_WITH_REPO:REPLACE_WITH_TAG"
+	environment = [
+			"BP_NATIVE_IMAGE": "true",
+			"BP_JVM_VERSION" : "25"
+	]
+}
+
+tasks.named("jar"){
+	dependsOn(":server:prepareUiResources")
+}
+
+tasks.named("resolveMainClassName"){
+	dependsOn(":server:prepareUiResources")
+}
+
+tasks.named("test"){
+	dependsOn(":server:prepareUiResources")
+}
+
+tasks.named("bootJar") {
+	dependsOn(tasks.named("prepareUiResources"))
+}

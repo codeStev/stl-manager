@@ -4,26 +4,29 @@ import VariantListPanel from "@/components/VariantListPanel.vue";
 import FileListPanel from "@/components/FileListPanel.vue";
 import ArtistListPanel from "@/components/ArtistListPanel.vue";
 import PreviewView from "@/views/PreviewView.vue";
+import FileDetailsPanel from "@/components/FileDetailsPanel.vue";
 </script>
 
 <template>
   <v-container class="pa-2" fluid>
     <v-row dense>
-      <!-- Library panel presumably sits elsewhere in your layout -->
-      <v-col cols="12" md="3">
+      <v-col cols="12" lg="2">
         <ArtistListPanel />
       </v-col>
 
-      <v-col cols="12" md="3">
+      <v-col cols="12" lg="3">
         <ModelListPanel />
       </v-col>
 
-      <v-col cols="12" md="3">
+      <v-col cols="12" lg="2">
         <VariantListPanel />
       </v-col>
 
-      <v-col cols="12" md="3">
+      <v-col cols="12" lg="2">
         <FileListPanel />
+      </v-col>
+      <v-col cols="12" lg="3">
+        <FileDetailsPanel />
       </v-col>
     </v-row>
     <PreviewView></PreviewView>

@@ -3,6 +3,7 @@ import {onBeforeUnmount, onMounted} from 'vue'
 import {useLibrariesStore} from '@/stores/libraries.ts'
 import {storeToRefs} from 'pinia'
 import {useSelectionStore} from '@/stores/selection'
+import ImportStatus from "@/components/ImportStatus.vue";
 
 const store = useLibrariesStore()
 const { items, isLoading, isFinished, error } = storeToRefs(store)
@@ -17,8 +18,22 @@ const selection = useSelectionStore()
 function onLibraryClick(libraryId: number) {
   selection.selectLibrary(libraryId)
 }
-onMounted(refresh)
-onBeforeUnmount(() => store.abort())
+
+function onImportFinished(status: { state: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAILED' }) {
+  if (status.state === 'SUCCESS') {
+    refresh()
+  }
+}
+
+
+onMounted(() => {
+  refresh()
+})
+
+onBeforeUnmount(() => {
+  store.abort()
+})
+
 </script>
 
 <script lang="ts">
@@ -49,15 +64,15 @@ export default {}
       </v-list>
 
       <v-container v-else-if="isFinished">No libraries found.</v-container>
+      <ImportStatus @import-finished="onImportFinished"
+      ></ImportStatus>
     </v-container>
   </v-navigation-drawer>
 
   <v-app-bar :elevation="2" color="primary" dark>
-    <template #prepend>
-      <v-input width="20" />
-    </template>
     <v-app-bar-title>STL-Manager</v-app-bar-title>
   </v-app-bar>
+
 </template>
 
 <style scoped>

@@ -4,6 +4,7 @@ import dev.codestev.server.business.mapping.LibraryRefMapper;
 import dev.codestev.server.business.model.LibraryRef;
 import dev.codestev.server.persistence.LibraryRepository;
 import dev.codestev.server.persistence.model.Library;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -23,6 +23,23 @@ public class LibraryService {
     public LibraryService(LibraryRepository libraryRepository, LibraryRefMapper refMapper) {
         this.libraryRepository = libraryRepository;
         this.refMapper = refMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<LibraryRef> listLibraries() {
+        // Use basic query without models for performance
+        List<Library> libraries = libraryRepository.findAllBasicInfo();
+        return libraries.stream()
+                .map(refMapper::toRef)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public LibraryRef getLibrary(long id) {
+        // Use basic query unless models are needed
+        Library library = libraryRepository.findByIdBasicInfo(id)
+                .orElseThrow(() -> new EntityNotFoundException("Library not found: " + id));
+        return refMapper.toRef(library);
     }
 
     @Transactional
@@ -55,21 +72,6 @@ public class LibraryService {
         } catch (DataIntegrityViolationException ex) {
             throw new IllegalArgumentException("Could not create library. Name must be unique: " + finalName, ex);
         }
-    }
-
-    @Transactional(readOnly = true)
-    public LibraryRef getLibrary(long id) {
-        var entity = libraryRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Library not found: " + id));
-        return refMapper.toRef(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public List<LibraryRef> listLibraries() {
-        var entities = libraryRepository.findAll().stream()
-                .sorted(Comparator.comparing(Library::getName, String.CASE_INSENSITIVE_ORDER))
-                .toList();
-        return refMapper.toRefs(entities);
     }
 
     private String normalizeAndValidatePath(String pathStr) {

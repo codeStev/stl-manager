@@ -18,7 +18,7 @@ public class ModelVariant {
     @Column(nullable = false, length = 200)
     private String name;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "model_id", nullable = false)
     private Model model;
 

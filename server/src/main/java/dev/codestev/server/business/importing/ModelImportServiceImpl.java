@@ -1,5 +1,6 @@
 package dev.codestev.server.business.importing;
 
+import dev.codestev.server.business.importing.status.ImportStatusService;
 import dev.codestev.server.persistence.model.Artist;
 import dev.codestev.server.persistence.model.Library;
 import org.slf4j.Logger;
@@ -25,7 +26,7 @@ public class ModelImportServiceImpl implements ModelImportService {
     private final VariantGateway variantGateway;
 
     private final TransactionTemplate tx;
-
+    private final ImportStatusService statusService;
     private final ReentrantLock runLock = new ReentrantLock();
 
     public ModelImportServiceImpl(
@@ -36,7 +37,7 @@ public class ModelImportServiceImpl implements ModelImportService {
             StlFileGateway stlGateway,
             ArtistGateway artistGateway,
             VariantGateway variantGateway,
-            TransactionTemplate tx
+            TransactionTemplate tx, ImportStatusService statusService
     ) {
         this.props = Objects.requireNonNull(props, "props");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
@@ -46,6 +47,7 @@ public class ModelImportServiceImpl implements ModelImportService {
         this.artistGateway = Objects.requireNonNull(artistGateway, "artistGateway");
         this.variantGateway = Objects.requireNonNull(variantGateway, "variantGateway");
         this.tx = tx;
+        this.statusService = statusService;
     }
 
     @Override
@@ -67,6 +69,7 @@ public class ModelImportServiceImpl implements ModelImportService {
                 return;
             }
 
+            statusService.setTotalModels(libraries.size());
             for (Library library : libraries) {
                 Path root = Path.of(library.getPath()).toAbsolutePath().normalize();
                 log.info("Starting model import from {}", root);
@@ -82,6 +85,7 @@ public class ModelImportServiceImpl implements ModelImportService {
                 Map<String, ExistingModel> existing = modelGateway.loadAllModelsAsMapByNameAndLibrary(library.getId());
 
                 List<Callable<Void>> tasks = new ArrayList<>(scanned.size());
+                statusService.setTotalModels(scanned.size());
                 // Create or update
                 for (var entry : scanned.entrySet()) {
                     tasks.add(() -> {
@@ -98,6 +102,7 @@ public class ModelImportServiceImpl implements ModelImportService {
                                 }
                             });
                         } finally {
+                            statusService.incrementProcessedModels();
                             dbPermits.release();
                         }
                         return null;
@@ -122,10 +127,9 @@ public class ModelImportServiceImpl implements ModelImportService {
                         library.getName(), scanned.size(), existing.size());
                 List<Future<Void>> futures = exec.invokeAll(tasks);
                 for (Future<Void> f : futures) {
-                    // Any exception from a task will be rethrown here
                     f.get();
                 }
-
+                statusService.incrementProcessedLibraries();
             }
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
             log.info("Full sync completed in {} ms (writeParallelism={})",
@@ -154,7 +158,6 @@ public class ModelImportServiceImpl implements ModelImportService {
         long modelId = modelGateway.createModel(modelName, library, artistId);
 
 
-        // Prepare variant ids for any named variants
         Map<String, Long> variantIds = new HashMap<>();
         for (var f : scannedModel.files()) {
             Long variantId = null;
@@ -175,7 +178,6 @@ public class ModelImportServiceImpl implements ModelImportService {
     }
 
     private void updateModel(ExistingModel existing, FilesystemModelScanner.ScannedModel scannedModel) {
-        // 1) Ensure/Update artist association
         Long desiredArtistId = null;
         if (scannedModel.artist() != null && !scannedModel.artist().isBlank()) {
             desiredArtistId = artistGateway.getOrCreateArtist(scannedModel.artist());
@@ -189,7 +191,6 @@ public class ModelImportServiceImpl implements ModelImportService {
             }
         }
 
-        // 2) Upsert variants present in scan, collect ids
         Set<String> scannedVariantNames = new HashSet<>();
         for (var f : scannedModel.files()) {
             f.variant().filter(v -> !v.isBlank()).ifPresent(scannedVariantNames::add);
@@ -201,7 +202,6 @@ public class ModelImportServiceImpl implements ModelImportService {
             variantIds.put(vName, vId);
         }
 
-        // 3) Diff STL files by relative path (includes variant path when present)
         Map<String, ExistingStl> existingByPath = new HashMap<>(existing.stlByPath());
 
         for (var f : scannedModel.files()) {
@@ -212,10 +212,8 @@ public class ModelImportServiceImpl implements ModelImportService {
                     .orElse(null);
 
             if (ex == null) {
-                // New file
                 stlGateway.upsertStlFile(existing.id(), variantId, f.fileName(), f.relativePath(), f.size(), f.lastModifiedMillis(), f.sha256().orElse(null));
             } else {
-                // Detect change and update if needed
                 boolean changed = ex.size() != f.size()
                         || (f.sha256().isPresent() && !Objects.equals(ex.sha256(), f.sha256().get()));
                 if (changed) {
@@ -224,7 +222,6 @@ public class ModelImportServiceImpl implements ModelImportService {
             }
         }
 
-        // Remaining existing files that were not seen in scan -> delete
         if (!existingByPath.isEmpty()) {
             for (var ex : existingByPath.values()) {
                 stlGateway.deleteStlFile(ex.id());

@@ -36,7 +36,7 @@ public class StlFile {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
-    @ManyToMany(mappedBy = "stlFiles", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "stlFiles")
     private Set<Model> models = new LinkedHashSet<>();
 
     public Long getId() {

@@ -18,11 +18,11 @@ public class Model {
 
     @Column(nullable = false, length = 200)
     private String name;
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "library_id", nullable = false)
     private Library library;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(
             name = "model_stl_files",
             joinColumns = @JoinColumn(name = "model_id"),
@@ -40,7 +40,7 @@ public class Model {
     @OrderBy("name ASC")
     private List<ModelVariant> variants = new ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true) // set optional=false if every Model must have an Artist
+    @ManyToOne(optional = true) // set optional=false if every Model must have an Artist
     @JoinColumn(name = "artist_id")
     private Artist artist;
 

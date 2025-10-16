@@ -11,6 +11,8 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
     private final StlFileRepository stlFileRepository;
@@ -36,31 +38,42 @@ public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
             String sha256OrNull
     ) {
         // Look up by model + storagePath to decide update vs insert
-        StlFile  found = stlFileRepository.findByModels_IdAndStoragePathIgnoreCase(modelId, relativePath).orElse(null);
+        StlFile found = stlFileRepository.findByModels_IdAndStoragePathIgnoreCase(modelId, relativePath).orElse(null);
+
         if (found == null) {
             // Create new file
-            Model model = modelRepository.findModelById(modelId).orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
-            ModelVariant variant = variantIdOrNull != null ? model.getVariants().stream().filter(v -> v.getId().equals(variantIdOrNull)).findFirst().orElse(null) : null;
+            Model model = modelRepository.findByIdBasic(modelId)
+                    .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
+
+            // Load variants separately if needed
+            ModelVariant variant = null;
+            if (variantIdOrNull != null) {
+                List<ModelVariant> variants = modelRepository.findVariantsByModelId(modelId);
+                variant = variants.stream()
+                        .filter(v -> v.getId().equals(variantIdOrNull))
+                        .findFirst()
+                        .orElse(null);
+            }
+
             StlFile file = new StlFile();
             file.setFileName(fileName);
             file.setStoragePath(relativePath);
             file.setSizeBytes(size);
             file.setChecksumSha256(sha256OrNull);
             file.addModel(model);
+
             if (variant != null) {
                 variant.addStlFile(file);
-                model.addVariant(variant);
+                // Since variant is loaded separately, we need to save it explicitly
+                entityManager.merge(variant);
             }
 
-            modelRepository.save(model);
-
+            stlFileRepository.save(file);
             log.debug("Inserted STL {} for model {}", relativePath, modelId);
+
         } else {
             // Update existing
             boolean changed = false;
-
-            Model model = modelRepository.findModelById(modelId).orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
-            ModelVariant variant = variantIdOrNull != null ? model.getVariants().stream().filter(v -> v.getId().equals(variantIdOrNull)).findFirst().orElse(null) : null;
 
             if (found.getSizeBytes() != size) {
                 found.setSizeBytes(size);
@@ -73,17 +86,24 @@ public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
             }
 
             if (changed) {
-                if (variant != null) {
-                    variant.addStlFile(found);
-                    model.addVariant(variant);
+                // Handle variant linkage for updates
+                if (variantIdOrNull != null) {
+                    List<ModelVariant> variants = modelRepository.findVariantsByModelId(modelId);
+                    ModelVariant variant = variants.stream()
+                            .filter(v -> v.getId().equals(variantIdOrNull))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (variant != null) {
+                        variant.addStlFile(found);
+                        entityManager.merge(variant);
+                    }
                 }
+
                 stlFileRepository.save(found);
                 log.debug("Updated STL {} for model {}", relativePath, modelId);
             }
         }
-
-        // Variant linkage is intentionally deferred here unless a VariantRepository is injected.
-        // If you need to link STL -> Variant, inject VariantRepository and set the relation when variantIdOrNull != null.
     }
 
     @Override

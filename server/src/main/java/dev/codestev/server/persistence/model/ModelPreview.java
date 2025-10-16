@@ -16,7 +16,7 @@ public class ModelPreview {
     private Long id;
 
     // Owning side of the relation
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne( optional = false)
     @JoinColumn(name = "model_id", nullable = false)
     private Model model;
 

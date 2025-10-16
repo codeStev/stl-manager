@@ -1,5 +1,6 @@
 package dev.codestev.server.business.importing;
 
+import dev.codestev.server.business.importing.status.ImportStatusService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -29,9 +30,10 @@ public class ModelImportConfig {
             ModelImportServiceImpl.StlFileGateway stlGateway,
             ModelImportServiceImpl.ArtistGateway artistGateway,
             ModelImportServiceImpl.VariantGateway variantGateway,
-            PlatformTransactionManager txManager
+            PlatformTransactionManager txManager,
+            ImportStatusService importStatusService
     ) {
-        return new ModelImportServiceImpl(props, scanner, libraryGateway, modelGateway, stlGateway, artistGateway, variantGateway, new TransactionTemplate(txManager));
+        return new ModelImportServiceImpl(props, scanner, libraryGateway, modelGateway, stlGateway, artistGateway, variantGateway, new TransactionTemplate(txManager), importStatusService);
     }
 
     @Bean
