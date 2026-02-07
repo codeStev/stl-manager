@@ -10,6 +10,7 @@ export function getLibraries(): {
   isFinished: Ref<boolean>;
   error: Ref<UnwrapRef<string | null>, UnwrapRef<string | null> | string | null>;
   executeLatest: () => Promise<void>;
+  createLibrary: (name: string, path: string) => Promise<any>; // Fixed this line
   abort: (message?: (string | undefined)) => void
 } {
 
@@ -63,11 +64,33 @@ export function getLibraries(): {
     }
   }
 
+  async function createLibrary(name: string, path: string) {
+    try {
+      const response = await instance.post('/libraries', {
+        library_name: name,
+        library_path: path
+      })
+
+      // Optionally add the new library to the current list if it exists
+      if (response.data && data.value) {
+        data.value.push(response.data)
+      }
+
+      return response.data
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to create library'
+      // Use your existing error handling mechanism
+      error.value = errorMessage
+      throw new Error(errorMessage)
+    }
+  }
+
   return {
     data,
     isLoading,
     isFinished,
     error,
+    createLibrary,
     executeLatest,
     abort,
   }

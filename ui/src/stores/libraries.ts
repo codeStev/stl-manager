@@ -4,7 +4,7 @@ import type {Library} from '@/types/external/LibraryTypes'
 import {getLibraries} from '@/api/libraries'
 
 export const useLibrariesStore = defineStore('libraries', () => {
-  const { data, isLoading, isFinished, error, executeLatest, abort } = getLibraries()
+  const { data, isLoading, isFinished, error, executeLatest, createLibrary, abort } = getLibraries()
 
   const items = computed<Library[]>(() => data.value ?? [])
 
@@ -17,6 +17,7 @@ export const useLibrariesStore = defineStore('libraries', () => {
     })
   }
 
+
   function reset() {
     abort()
   }
@@ -28,6 +29,7 @@ export const useLibrariesStore = defineStore('libraries', () => {
     isFinished,
     error,
     // actions
+    createLibrary,
     loadAll,
     abort,
     reset,

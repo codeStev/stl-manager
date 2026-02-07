@@ -30,9 +30,6 @@ const data = computed(() => entry.value ?? null)
       <div v-if="selectedVariantId == null" class="text-medium-emphasis">
         Select a variant to see files.
       </div>
-
-
-
       <template v-else>
         <v-list v-if="data?.values">
           <v-list-item

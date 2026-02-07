@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted} from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import {useLibrariesStore} from '@/stores/libraries.ts'
 import {storeToRefs} from 'pinia'
 import {useSelectionStore} from '@/stores/selection'
-import ImportStatus from "@/components/ImportStatus.vue";
+import ImportStatus from "@/components/ImportStatus.vue"
+import CreateLibraryDialog from "@/components/CreateLibraryDialog.vue"
 
 const store = useLibrariesStore()
 const { items, isLoading, isFinished, error } = storeToRefs(store)
 
+const showCreateDialog = ref(false)
 
 function refresh() {
   store.loadAll()
@@ -25,6 +27,9 @@ function onImportFinished(status: { state: 'IDLE' | 'RUNNING' | 'SUCCESS' | 'FAI
   }
 }
 
+function onLibraryCreated() {
+  refresh()
+}
 
 onMounted(() => {
   refresh()
@@ -33,7 +38,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   store.abort()
 })
-
 </script>
 
 <script lang="ts">
@@ -43,6 +47,17 @@ export default {}
 <template>
   <v-navigation-drawer permanent>
     <v-container>
+      <!-- Create Library Button -->
+      <v-btn
+        color="primary"
+        block
+        class="mb-4"
+        prepend-icon="mdi-plus"
+        @click="showCreateDialog = true"
+      >
+        Create New Library
+      </v-btn>
+
       <v-skeleton-loader v-if="isLoading" type="list-item-avatar" />
       <v-container v-else-if="error" style="color:#c00">Error: {{ error }}</v-container>
 
@@ -64,8 +79,8 @@ export default {}
       </v-list>
 
       <v-container v-else-if="isFinished">No libraries found.</v-container>
-      <ImportStatus @import-finished="onImportFinished"
-      ></ImportStatus>
+
+      <ImportStatus @import-finished="onImportFinished" />
     </v-container>
   </v-navigation-drawer>
 
@@ -73,6 +88,11 @@ export default {}
     <v-app-bar-title>STL-Manager</v-app-bar-title>
   </v-app-bar>
 
+  <!-- Create Library Dialog -->
+  <CreateLibraryDialog
+    v-model="showCreateDialog"
+    @library-created="onLibraryCreated"
+  />
 </template>
 
 <style scoped>

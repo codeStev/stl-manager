@@ -65,10 +65,11 @@ public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
             if (variant != null) {
                 variant.addStlFile(file);
                 // Since variant is loaded separately, we need to save it explicitly
+                modelRepository.save(model);
+                stlFileRepository.save(file);
                 entityManager.merge(variant);
             }
 
-            stlFileRepository.save(file);
             log.debug("Inserted STL {} for model {}", relativePath, modelId);
 
         } else {
@@ -96,11 +97,11 @@ public class StlGatewayJpa implements ModelImportServiceImpl.StlFileGateway {
 
                     if (variant != null) {
                         variant.addStlFile(found);
+                        stlFileRepository.save(found);
                         entityManager.merge(variant);
                     }
                 }
 
-                stlFileRepository.save(found);
                 log.debug("Updated STL {} for model {}", relativePath, modelId);
             }
         }

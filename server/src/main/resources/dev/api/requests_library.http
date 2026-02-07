@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
   "library_name": "stltestlib",
-  "library_path": "/home/{{user_folder}}/stltestlib"
+  "library_path": "/run/media/shohnke/Elements/onedrive/Discovery_OneDrive_steven_hohnke/KnowledgeBase/3dPrinting"
 }
 ###
 
